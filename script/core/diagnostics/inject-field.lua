@@ -111,23 +111,35 @@ return function (uri, callback)
     guide.eachSourceType(ast.ast, 'setfield',  checkInjectField)
     guide.eachSourceType(ast.ast, 'setmethod', checkInjectField)
 
+    local mark = {}
     ---@async
     local function checkExtraTableField(src)
         await.delay()
+        if mark[src] then
+            return
+        end
+        local value = src
+        if src.type == 'doc.class' then
+            if src.bindSource then
+                value = src.bindSource.value
+                mark[value] = true
+                if not vm.docHasAttr(src, 'exact') then
+                    return
+                end
+                if not value or value.type ~= 'table' then
+                    return
+                end
+            else
+                return
+            end
+        end
 
-        if not src.bindSource then
-            return
-        end
-        if not vm.docHasAttr(src, 'exact') then
-            return
-        end
-        local value = src.bindSource.value
-        if not value or value.type ~= 'table' then
-            return
-        end
         for _, field in ipairs(value) do
             local defs = vm.getDefs(field)
             for _, def in ipairs(defs) do
+                if def.type == 'doc.type.field' then
+                    goto nextField
+                end
                 if def.type == 'doc.field' then
                     goto nextField
                 end
@@ -145,6 +157,6 @@ return function (uri, callback)
             ::nextField::
         end
     end
-
     guide.eachSourceType(ast.ast, 'doc.class', checkExtraTableField)
+    guide.eachSourceType(ast.ast, 'table', checkExtraTableField)
 end
