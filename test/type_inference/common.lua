@@ -3609,7 +3609,7 @@ TEST '-2|-3|1' [[
 local <?n?>
 ]]
 
-TEST 'table' [[
+TEST 'enum A' [[
 ---@enum A
 local m = {}
 
@@ -4191,4 +4191,253 @@ TEST 'boolean|number' [[
 
 ---@type A
 local <?x?>
+]]
+
+--reverse binary operator tests
+
+TEST 'A' [[
+---@class A
+---@operator add(number): A
+
+---@type A
+local x
+local <?y?> = x + 1
+]]
+
+TEST 'A' [[
+---@class A
+---@operator add(number): A
+
+---@type A
+local x
+local <?y?> = 1 + x
+]]
+
+TEST 'A' [[
+---@class A
+---@operator sub(number): A
+
+---@type A
+local x
+local <?y?> = x - 1
+]]
+
+TEST 'A' [[
+---@class A
+---@operator sub(number): A
+
+---@type A
+local x
+local <?y?> = 1 - x
+]]
+
+TEST 'A' [[
+---@class A
+---@operator mul(number): A
+
+---@type A
+local x
+local <?y?> = x * 1
+]]
+
+TEST 'A' [[
+---@class A
+---@operator mul(number): A
+
+---@type A
+local x
+local <?y?> = 1 * x
+]]
+
+TEST 'A' [[
+---@class A
+---@operator div(number): A
+
+---@type A
+local x
+local <?y?> = x / 1
+]]
+
+TEST 'A' [[
+---@class A
+---@operator div(number): A
+
+---@type A
+local x
+local <?y?> = 1 / x
+]]
+
+TEST 'A' [[
+---@class A
+---@operator idiv(number): A
+
+---@type A
+local x
+local <?y?> = x // 1
+]]
+
+TEST 'A' [[
+---@class A
+---@operator idiv(number): A
+
+---@type A
+local x
+local <?y?> = 1 // x
+]]
+
+TEST 'A' [[
+---@class A
+---@operator mod(number): A
+
+---@type A
+local x
+local <?y?> = x % 1
+]]
+
+TEST 'A' [[
+---@class A
+---@operator mod(number): A
+
+---@type A
+local x
+local <?y?> = 1 % x
+]]
+
+TEST 'A' [[
+---@class A
+---@operator pow(number): A
+
+---@type A
+local x
+local <?y?> = x ^ 1
+]]
+
+TEST 'A' [[
+---@class A
+---@operator pow(number): A
+
+---@type A
+local x
+local <?y?> = 1 ^ x
+]]
+
+TEST 'A' [[
+---@class A
+---@operator concat(number): A
+
+---@type A
+local x
+local <?y?> = x .. 1
+]]
+
+TEST 'A' [[
+---@class A
+---@operator concat(number): A
+
+---@type A
+local x
+local <?y?> = 1 .. x
+]]
+
+TEST 'A' [[
+---@class A
+---@operator band(number): A
+
+---@type A
+local x
+local <?y?> = x & 1
+]]
+
+TEST 'A' [[
+---@class A
+---@operator band(number): A
+
+---@type A
+local x
+local <?y?> = 1 & x
+]]
+
+TEST 'A' [[
+---@class A
+---@operator bor(number): A
+
+---@type A
+local x
+local <?y?> = x | 1
+]]
+
+TEST 'A' [[
+---@class A
+---@operator bor(number): A
+
+---@type A
+local x
+local <?y?> = 1 | x
+]]
+
+TEST 'A' [[
+---@class A
+---@operator bxor(number): A
+
+---@type A
+local x
+local <?y?> = x ~ 1
+]]
+
+TEST 'A' [[
+---@class A
+---@operator bxor(number): A
+
+---@type A
+local x
+local <?y?> = 1 ~ x
+]]
+
+TEST 'A' [[
+---@class A
+---@operator shl(number): A
+
+---@type A
+local x
+local <?y?> = x << 1
+]]
+
+TEST 'A' [[
+---@class A
+---@operator shl(number): A
+
+---@type A
+local x
+local <?y?> = 1 << x
+]]
+
+TEST 'A' [[
+---@class A
+---@operator shr(number): A
+
+---@type A
+local x
+local <?y?> = x >> 1
+]]
+
+TEST 'A' [[
+---@class A
+---@operator shr(number): A
+
+---@type A
+local x
+local <?y?> = 1 >> x
+]]
+
+TEST 'number' [[
+---@class A
+local A = {}
+
+---@param x number
+function A:func(x) end
+
+---@class B: A
+local B = {}
+
+function B:func(<?x?>) end
 ]]

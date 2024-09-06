@@ -222,7 +222,7 @@ m.register 'workspace/didRenameFiles' {
             for _, uri in ipairs(childs) do
                 if files.exists(uri) then
                     local ouri = uri
-                    local tail = ouri:sub(#oldUri)
+                    local tail = ouri:sub(#oldUri + 1)
                     local nuri = file.newUri .. tail
                     renames[#renames+1] = {
                         oldUri = ouri,
@@ -1597,8 +1597,23 @@ m.register '$/psi/select' {
     end
 }
 
+local function refreshLanguageConfiguration()
+    if not client.getOption('languageConfiguration') then
+        return
+    end
+    proto.notify('$/languageConfiguration', require 'provider.language-configuration')
+end
+
+config.watch(function (uri, key, value)
+    if key == '' then
+        refreshLanguageConfiguration()
+    end
+end)
 
 local function refreshStatusBar()
+    if not client.getOption('statusBar') then
+        return
+    end
     local valid = config.get(nil, 'Lua.window.statusBar')
     for _, scp in ipairs(workspace.folders) do
         if not config.get(scp.uri, 'Lua.window.statusBar') then

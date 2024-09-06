@@ -189,6 +189,41 @@ local searchFieldSwitch = util.switch()
                 end
             end
         end
+        local docs = source.bindDocs
+        if docs then
+            for _, doc in ipairs(docs) do
+                if doc.type == 'doc.enum' then
+                    if not vm.docHasAttr(doc, 'partial')  then
+                        return
+                    end
+                    for _, def in ipairs(vm.getDefs(doc)) do
+                        if def.type ~= 'doc.enum' then
+                            goto CONTINUE
+                        end
+                        local tbl = def.bindSource
+                        if not tbl then
+                            return
+                        end
+                        for _, field in ipairs(tbl) do
+                            if field.type == 'tablefield'
+                            or field.type == 'tableindex' then
+                                if not field.value then
+                                    goto CONTINUE
+                                end
+                                local fieldKey = guide.getKeyName(field)
+                                if key == vm.ANY
+                                or key == fieldKey then
+                                    hasFiled = true
+                                    pushResult(field)
+                                end
+                                ::CONTINUE::
+                            end
+                        end
+                        ::CONTINUE::
+                    end
+                end
+            end
+        end
     end)
     : case 'string'
     : case 'doc.type.string'
@@ -1053,24 +1088,29 @@ end
 ---@param func parser.object
 ---@param source parser.object
 local function compileFunctionParam(func, source)
+    local aindex
+    for index, arg in ipairs(func.args) do
+        if arg == source then
+            aindex = index
+            break
+        end
+    end
+    ---@cast aindex integer
+
     -- local call ---@type fun(f: fun(x: number));call(function (x) end) --> x -> number
     local funcNode = vm.compileNode(func)
     for n in funcNode:eachObject() do
-        if n.type == 'doc.type.function' then
-            for index, arg in ipairs(n.args) do
-                if func.args[index] == source then
-                    local argNode = vm.compileNode(arg)
-                    for an in argNode:eachObject() do
-                        if an.type ~= 'doc.generic.name' then
-                            vm.setNode(source, an)
-                        end
-                    end
-                    return true
+        if n.type == 'doc.type.function' and n.args[aindex] then
+            local argNode = vm.compileNode(n.args[aindex])
+            for an in argNode:eachObject() do
+                if an.type ~= 'doc.generic.name' then
+                    vm.setNode(source, an)
                 end
             end
+            return true
         end
     end
-    
+
     local derviationParam = config.get(guide.getUri(func), 'Lua.type.inferParamType')
     if derviationParam and func.parent.type == 'local' and func.parent.ref then
         local refs = func.parent.ref
@@ -1083,18 +1123,49 @@ local function compileFunctionParam(func, source)
             if not caller.args then
                 goto continue
             end
-            for index, arg in ipairs(source.parent) do
-                if arg == source then
-                    local callerArg = caller.args[index]
-                    if callerArg then
-                        vm.setNode(source, vm.compileNode(callerArg))
-                        found = true
-                    end
-                end
+            local callerArg = caller.args[aindex]
+            if callerArg then
+                vm.setNode(source, vm.compileNode(callerArg))
+                found = true
             end
             ::continue::
         end
         return found
+    end
+
+    do
+        local parent = func.parent
+        local key = vm.getKeyName(parent)
+        local classDef = vm.getParentClass(parent)
+        local suri = guide.getUri(func)
+        if classDef and key then
+            local found
+            for _, set in ipairs(classDef:getSets(suri)) do
+                if set.type == 'doc.class' and set.extends then
+                    for _, ext in ipairs(set.extends) do
+                        local extClass = vm.getGlobal('type', ext[1])
+                        if extClass then
+                            vm.getClassFields(suri, extClass, key, function (field, isMark)
+                                for n in vm.compileNode(field):eachObject() do
+                                    if n.type == 'function' and n.args[aindex] then
+                                        local argNode = vm.compileNode(n.args[aindex])
+                                        for an in argNode:eachObject() do
+                                            if an.type ~= 'doc.generic.name' then
+                                                vm.setNode(source, an)
+                                                found = true
+                                            end
+                                        end
+                                    end
+                                end
+                            end)
+                        end
+                    end
+                end
+            end
+            if found then
+                return true
+            end
+        end
     end
 end
 
@@ -1139,10 +1210,17 @@ local function compileLocal(source)
     end
     if source.parent.type == 'funcargs' and not hasMarkDoc and not hasMarkParam then
         local func = source.parent.parent
-        local vmPlugin = plugin.getVmPlugin(guide.getUri(source))
-        local hasDocArg = vmPlugin and vmPlugin.OnCompileFunctionParam(compileFunctionParam, func, source)
-            or compileFunctionParam(func, source)
-        if not hasDocArg then
+        local interfaces = plugin.getPluginInterfaces(guide.getUri(source))
+        local hasDocArg = false
+        if interfaces then
+            for _, interface in ipairs(interfaces) do
+                if interface.VM then
+                    hasDocArg = interface.VM.OnCompileFunctionParam(compileFunctionParam, func, source)
+                    if hasDocArg then break end
+                end
+            end
+        end
+        if not hasDocArg and not compileFunctionParam(func, source) then
             vm.setNode(source, vm.declareGlobal('type', 'any'))
         end
     end

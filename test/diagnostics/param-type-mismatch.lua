@@ -1,3 +1,4 @@
+local config = require "config.config"
 TEST [[
 ---@param x number
 local function f(x) end
@@ -264,3 +265,91 @@ local function f(v) end
 f 'x'
 f 'y'
 ]]
+
+TEST [[
+---@class A
+---@field x string
+---@field y number
+
+local a = {x = "", y = 0}
+
+---@param a A
+function f(a) end
+
+f(a)
+]]
+
+config.set(nil, 'Lua.type.checkTableShape', true)
+
+TEST [[
+---@class A
+---@field x string
+---@field y number
+
+local a = {x = ""}
+
+---@param a A
+function f(a) end
+
+f(<!a!>)
+]]
+
+TEST [[
+---@class A
+---@field x string
+---@field y number
+
+local a = {x = "", y = ""}
+
+---@param a A
+function f(a) end
+
+f(<!a!>)
+]]
+
+TEST [[
+---@class A
+---@field x string
+---@field y? B
+
+---@class B
+---@field x string
+
+local a = {x = "b", y = {x = "c"}}
+
+---@param a A
+function f(a) end
+
+f(a)
+]]
+
+TEST [[
+---@class A
+---@field x string
+---@field y B
+
+---@class B
+---@field x string
+
+local a = {x = "b", y = {}}
+
+---@param a A
+function f(a) end
+
+f(<!a!>)
+]]
+
+TEST [[
+---@class A
+---@field x string
+
+---@type A
+local a = {}
+
+---@param a A
+function f(a) end
+
+f(a)
+]]
+
+config.set(nil, 'Lua.type.checkTableShape', false)

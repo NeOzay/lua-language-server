@@ -2,6 +2,38 @@
 
 ## Unreleased
 <!-- Add all new changes here. They will be moved under a version at release -->
+* `NEW` Custom documentation exporter
+* `NEW` Setting: `Lua.docScriptPath`: Path to a script that overrides `cli.doc.export`, allowing user-specified documentation exporting.
+* `NEW` Infer the parameter types of a same-named function in the subclass based on the parameter types in the superclass function.
+* `FIX` Fix `VM.OnCompileFunctionParam` function in plugins
+* `FIX` Lua 5.1: fix incorrect warning when using setfenv with an int as first parameter
+* `FIX` Improve type narrow by checking exact match on literal type params
+
+## 3.10.5
+`2024-8-19`
+* `NEW` using `enum (partial)`, it suggests all fields with the same `enum` type rather than just the fields from the current table.
+* `NEW` When using `enum["<key>" or <index>]`, undefined fields will raise an 'undefined' error.
+* `FIX` Renaming files in the directory leads to the auto-correction in "require" adding extra characters.
+* `FIX` Performance issue
+* `FIX` Fix incorrect indent fixing for `for`
+
+## 3.10.4
+`2024-8-16`
+* `NEW` Setting: `Lua.type.checkTableShape`: Add matching checks between the shape of tables and classes, during type checking. [#2768](https://github.com/LuaLS/lua-language-server/pull/2768)
+* `NEW` `undefined-field` supports `enum`
+* `CHG` Show enumed table as `enum X` instead of `table`
+* `FIX` Error `attempt to index a nil value` when `Lua.hint.semicolon == 'All'` [#2788](https://github.com/LuaLS/lua-language-server/issues/2788)
+* `FIX` Incorrect LuaCats parsing for `"'"`
+* `FIX` Incorrect indent fixings
+
+## 3.10.3
+`2024-8-8`
+* `FIX` Memory leak with `---@enum(partical)`
+
+## 3.10.2
+`2024-8-7`
+* `NEW` Add support for binary metamethod on right operand [#2777](https://github.com/LuaLS/lua-language-server/pull/2777)
+* `FIX` Incorrect indentation fixing in some case
 
 ## 3.10.1
 `2024-8-2`
