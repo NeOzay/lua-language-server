@@ -101,6 +101,26 @@ local function searchFieldByLocalID(source, key, pushResult)
     if not fields then
         return
     end
+
+    --Exact classes do not allow injected fields
+    if source.type ~= 'variable' and source.bindDocs then
+        ---@cast source parser.object
+        local uri = guide.getUri(source)
+        for _, src in ipairs(fields) do
+            if src.type == "setfield" then
+                local class = vm.getDefinedClass(uri, source)
+                if class then
+                    for _, doc in ipairs(class:getSets(uri)) do
+                        if vm.docHasAttr(doc, 'exact') then
+                            return
+                        end
+                    end
+                end
+            end
+        end
+    end
+    
+
     local hasMarkDoc = {}
     for _, src in ipairs(fields) do
         if src.bindDocs then
@@ -1097,16 +1117,54 @@ local function compileFunctionParam(func, source)
     end
     ---@cast aindex integer
 
-    -- local call ---@type fun(f: fun(x: number));call(function (x) end) --> x -> number
     local funcNode = vm.compileNode(func)
-    for n in funcNode:eachObject() do
-        if n.type == 'doc.type.function' and n.args[aindex] then
-            local argNode = vm.compileNode(n.args[aindex])
-            for an in argNode:eachObject() do
-                if an.type ~= 'doc.generic.name' then
-                    vm.setNode(source, an)
+    if func.parent.type == 'callargs' then
+        -- local call ---@type fun(f: fun(x: number));call(function (x) end) --> x -> number
+        for n in funcNode:eachObject() do
+            if n.type == 'doc.type.function' and n.args[aindex] then
+                local argNode = vm.compileNode(n.args[aindex])
+                for an in argNode:eachObject() do
+                    if an.type ~= 'doc.generic.name' then
+                        vm.setNode(source, an)
+                    end
                 end
+                -- NOTE: keep existing behavior for function as argument which only set type based on the 1st match
+                return true
             end
+        end
+    else
+        -- function declaration: use info from all `fun()`, also from the base function when overriding
+        --[[
+            ---@type fun(x: string)|fun(x: number)
+            local function f1(x) end --> x -> string|number
+
+            ---@overload fun(x: string)
+            ---@overload fun(x: number)
+            local function f2(x) end --> x -> string|number
+
+            ---@class A
+            local A = {}
+            ---@param x number
+            function A:f(x) end --> x -> number
+            ---@type A
+            local a = {}
+            function a:f(x) end --> x -> number
+        ]]
+        local found = false
+        for n in funcNode:eachObject() do
+            if (n.type == 'doc.type.function' or n.type == 'function')
+            and n.args[aindex] and n.args[aindex] ~= source
+            then
+                local argNode = vm.compileNode(n.args[aindex])
+                for an in argNode:eachObject() do
+                    if an.type ~= 'doc.generic.name' then
+                        vm.setNode(source, an)
+                    end
+                end
+                found = true
+            end
+        end
+        if found then
             return true
         end
     end
@@ -1143,22 +1201,27 @@ local function compileFunctionParam(func, source)
             for _, set in ipairs(classDef:getSets(suri)) do
                 if set.type == 'doc.class' and set.extends then
                     for _, ext in ipairs(set.extends) do
+                        if not ext[1] then
+                            goto continue
+                        end
                         local extClass = vm.getGlobal('type', ext[1])
-                        if extClass then
-                            vm.getClassFields(suri, extClass, key, function (field, isMark)
-                                for n in vm.compileNode(field):eachObject() do
-                                    if n.type == 'function' and n.args[aindex] then
-                                        local argNode = vm.compileNode(n.args[aindex])
-                                        for an in argNode:eachObject() do
-                                            if an.type ~= 'doc.generic.name' then
-                                                vm.setNode(source, an)
-                                                found = true
-                                            end
+                        if not extClass then
+                            goto continue
+                        end
+                        vm.getClassFields(suri, extClass, key, function (field, isMark)
+                            for n in vm.compileNode(field):eachObject() do
+                                if n.type == 'function' and n.args[aindex] then
+                                    local argNode = vm.compileNode(n.args[aindex])
+                                    for an in argNode:eachObject() do
+                                        if an.type ~= 'doc.generic.name' then
+                                            vm.setNode(source, an)
+                                            found = true
                                         end
                                     end
                                 end
-                            end)
-                        end
+                            end
+                        end)
+                        ::continue::
                     end
                 end
             end
